@@ -1,0 +1,68 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: rust-http-hello-world
+  annotations:
+    version: v0.0.1
+    description: "HTTP hello world demo in Rust, using the WebAssembly Component Model and WebAssembly Interfaces Types (WIT)"
+    experimental: true
+spec:
+  components:
+    - name: http-hello-world
+      type: actor
+      properties:
+        # TODO: you must replace the path below to match your genreated code in build
+        # Try using `wash build -o json` and use the `actor_path` field, prepended with `file://`
+        image: file:///app/build/http_hello_world_s.wasm
+      traits:
+        # Govern the spread/scheduling of the actor
+        - type: spreadscaler
+          properties:# HTTP Hello World
+
+This is a simple Rust Wasm example that responds with a "Hello World" message for each request.
+
+## Prerequisites
+
+- `cargo` 1.74
+- `wash` 0.25.0
+- `wasmtime` 16.0.0 (if running with wasmtime)
+
+## Building
+
+```bash
+wash build
+```
+
+## Running with wasmtime
+
+You must have wasmtime 16.0.0 for this to work. Make sure to follow the build step above first.
+
+```bash
+wasmtime serve -Scommon ./build/http_hello_world_s.wasm
+```
+
+## Running with wasmCloud
+
+Make sure to follow the build steps above, and replace the file path in [the wadm manifest](./wadm.yaml) with the absolute path to your local built component.
+
+```sh
+wash up -d
+wash app deploy ./wadm.yaml
+curl http://localhost:8081
+```
+
+            replicas: 1
+        # Link the HTTP server, and inform it to listen on port 8081
+        # on the local machine
+        - type: linkdef
+          properties:
+            target: httpserver
+            values:
+              address: 0.0.0.0:8081
+
+    # Add a capability provider that mediates HTTP access
+    - name: httpserver
+      type: capability
+      properties:
+        image: wasmcloud.azurecr.io/httpserver:0.19.1
+        contract: wasmcloud:httpserver
